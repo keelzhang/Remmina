@@ -54,6 +54,7 @@ struct mpchanger_params {
 	gchar *password;	// New password
 	gchar *group;
 
+	GtkEntry *eGroup, *eUsername, *eDomain;
 	GtkListStore* store;
 	GtkDialog* dialog;
 	GtkTreeView* table;
@@ -69,15 +70,32 @@ enum {
 	NUM_COLS
 };
 
+static gboolean remmina_mpchange_fieldcompare(const gchar *needle, const gchar *haystack, int *matchcount)
+{
+	TRACE_CALL("remmina_mpchange_fieldcompare");
+
+	if (needle[0] == 0) {
+		(*matchcount) ++;
+		return TRUE;
+	}
+
+	if (strcasecmp(needle,haystack) != 0)
+		return FALSE;
+
+	(*matchcount) ++;
+	return TRUE;
+
+}
+
 static void remmina_mpchange_file_list_callback(RemminaFile *remminafile, gpointer user_data)
 {
 	TRACE_CALL("remmina_mpchange_file_list_callback");
 	GtkListStore* store;
 	GtkTreeIter iter;
+	int matchcount;
 	const gchar *username, *domain, *group;
 
 	gchar* s;
-	gboolean sel;
 	struct mpchanger_params* mpcp;
 
 	mpcp = (struct mpchanger_params*)user_data;
@@ -97,16 +115,13 @@ static void remmina_mpchange_file_list_callback(RemminaFile *remminafile, gpoint
 	if (group == NULL)
 		group = "";
 
-
-	if (strcasecmp(username, mpcp->username) != 0 ||
-		strcasecmp(domain, mpcp->domain) != 0)
+	matchcount = 0;
+	if (!remmina_mpchange_fieldcompare(mpcp->username, username, &matchcount))
 		return;
-
-	if (strcasecmp(group, mpcp->group) != 0)
-		sel = FALSE;
-	else
-		sel = TRUE;
-
+	if (!remmina_mpchange_fieldcompare(mpcp->domain, domain, &matchcount))
+		return;
+	if (!remmina_mpchange_fieldcompare(mpcp->group, group, &matchcount))
+		return;
 
 	gtk_list_store_append(store, &iter);
 	s = g_strdup_printf("%s\\%s", domain, username);
@@ -114,7 +129,7 @@ static void remmina_mpchange_file_list_callback(RemminaFile *remminafile, gpoint
 	printf("GIO: %s %s\\%s %s\n",remminafile->filename, mpcp->domain, mpcp->username, s);
 
 	gtk_list_store_set(store, &iter,
-		COL_F, sel,
+		COL_F, matchcount >= 3 ? TRUE : FALSE,
 		COL_NAME, remmina_file_get_string(remminafile, "name"),
 		COL_GROUP, group,
 		COL_USERNAME,   s,
@@ -128,14 +143,14 @@ static void remmina_mpchange_checkbox_toggle(GtkCellRendererToggle *cell, gchar 
 {
 	TRACE_CALL("remmina_mpchange_checkbox_toggle");
 	GtkTreeIter iter;
-	GtkListStore* store = (GtkListStore*)user_data;
+	struct mpchanger_params* mpcp = (struct mpchanger_params*)user_data;
 	GtkTreePath *path;
 
 	gboolean a = gtk_cell_renderer_toggle_get_active(cell);
 	path = gtk_tree_path_new_from_string(path_string);
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(store), &iter, path);
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(mpcp->store), &iter, path);
 	gtk_tree_path_free (path);
-	gtk_list_store_set(store, &iter, COL_F, !a, -1);
+	gtk_list_store_set(mpcp->store, &iter, COL_F, !a, -1);
 }
 
 static void remmina_mpchange_dochange(gchar* fname, struct mpchanger_params* mpcp)
@@ -174,6 +189,36 @@ static void remmina_mpchange_dochange_clicked(GtkButton *btn, gpointer user_data
 
 }
 
+static void remmina_mpchange_searchfield_changed(GtkSearchEntry *se, gpointer user_data)
+{
+	TRACE_CALL("remmina_mpchange_searchfield_changed");
+	struct mpchanger_params *mpcp = (struct mpchanger_params *)user_data;
+	const gchar *s;
+
+	s = gtk_entry_get_text(mpcp->eGroup);
+	g_free(mpcp->group);
+	mpcp->group = g_strdup(s);
+
+	s = gtk_entry_get_text(mpcp->eDomain);
+	g_free(mpcp->domain);
+	mpcp->domain = g_strdup(s);
+
+	s = gtk_entry_get_text(mpcp->eUsername);
+	g_free(mpcp->username);
+	mpcp->username = g_strdup(s);
+
+	if (mpcp->store != NULL) {
+		gtk_tree_view_set_model(mpcp->table, NULL);
+	}
+	mpcp->store = gtk_list_store_new(NUM_COLS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+	remmina_file_manager_iterate((GFunc) remmina_mpchange_file_list_callback, (gpointer)mpcp);
+
+	printf("GIO: #1\n");
+	gtk_tree_view_set_model(mpcp->table, GTK_TREE_MODEL(mpcp->store));
+	printf("GIO: #2\n");
+
+}
+
 static gboolean remmina_file_multipasswd_changer_mt(gpointer d)
 {
 	TRACE_CALL("remmina_file_multipasswd_changer_mt");
@@ -181,10 +226,9 @@ static gboolean remmina_file_multipasswd_changer_mt(gpointer d)
 	GtkBuilder* bu;
 	GtkDialog* dialog;
 	GtkWindow* mainwindow;
-	GtkLabel* lbl;
-	gchar* s;
-	GtkListStore* lstore;
 	GtkCellRendererToggle *toggle;
+	GtkEntry *ePassword1, *ePassword2;
+
 
 	printf("GIO: multipasschanger called for username = %s\n", mpcp->username);
 
@@ -203,21 +247,37 @@ static gboolean remmina_file_multipasswd_changer_mt(gpointer d)
 	if (mainwindow)
 		gtk_window_set_transient_for(GTK_WINDOW(dialog), mainwindow);
 
-	lstore = gtk_list_store_new(NUM_COLS, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 
-	s = g_strdup_printf(_("Changing password for user <span weight='bold'>%s\\%s</span> in group <span weight='bold'>%s</span>"), mpcp->domain, mpcp->username, mpcp->group);
-	lbl = GTK_LABEL(GET_DIALOG_OBJECT("row1Label"));
-	gtk_label_set_markup(lbl, s);
-	g_free(s);
 
-	mpcp->store = lstore;
-	remmina_file_manager_iterate((GFunc) remmina_mpchange_file_list_callback, (gpointer)mpcp);
+	mpcp->eGroup = GTK_ENTRY(GET_DIALOG_OBJECT("groupEntry"));
+	gtk_entry_set_text(mpcp->eGroup, mpcp->group);
+	g_signal_connect(G_OBJECT(mpcp->eGroup), "changed", G_CALLBACK(remmina_mpchange_searchfield_changed), (gpointer)mpcp);
+
+	mpcp->eUsername = GTK_ENTRY(GET_DIALOG_OBJECT("usernameEntry"));
+	gtk_entry_set_text(mpcp->eUsername, mpcp->username);
+	g_signal_connect(G_OBJECT(mpcp->eUsername), "changed", G_CALLBACK(remmina_mpchange_searchfield_changed), (gpointer)mpcp);
+
+	mpcp->eDomain = GTK_ENTRY(GET_DIALOG_OBJECT("domainEntry"));
+	gtk_entry_set_text(mpcp->eDomain, mpcp->domain);
+	g_signal_connect(G_OBJECT(mpcp->eDomain), "changed", G_CALLBACK(remmina_mpchange_searchfield_changed), (gpointer)mpcp);
+
+	ePassword1 = GTK_ENTRY(GET_DIALOG_OBJECT("password1Entry"));
+	gtk_entry_set_text(ePassword1, mpcp->password);
+
+	ePassword2 = GTK_ENTRY(GET_DIALOG_OBJECT("password2Entry"));
+	gtk_entry_set_text(ePassword2, mpcp->password);
+
+
+	mpcp->store = NULL;
 
 	mpcp->table = GTK_TREE_VIEW(GET_DIALOG_OBJECT("profchangelist"));
-	gtk_tree_view_set_model(mpcp->table, GTK_TREE_MODEL(lstore));
+
+	/* Fire a fake searchfield changed, so a new list store is created */
+	remmina_mpchange_searchfield_changed(NULL, (gpointer)mpcp);
+
 
 	toggle = GTK_CELL_RENDERER_TOGGLE(GET_DIALOG_OBJECT("cellrenderertoggle1"));
-	g_signal_connect(G_OBJECT(toggle), "toggled", G_CALLBACK(remmina_mpchange_checkbox_toggle), (gpointer)lstore);
+	g_signal_connect(G_OBJECT(toggle), "toggled", G_CALLBACK(remmina_mpchange_checkbox_toggle), (gpointer)mpcp);
 
 	mpcp->btnDoChange = GTK_BUTTON(GET_DIALOG_OBJECT("btnDoChange"));
 	g_signal_connect(mpcp->btnDoChange, "clicked", G_CALLBACK(remmina_mpchange_dochange_clicked), (gpointer)mpcp);
