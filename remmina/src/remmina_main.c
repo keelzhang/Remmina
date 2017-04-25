@@ -599,7 +599,6 @@ void remmina_main_on_action_connection_connect(GtkAction *action, gpointer user_
 
 	remmina_file_touch(remminafile);
 	remmina_connection_window_open_from_filename(remminamain->priv->selected_filename);
-	// remmina_mpchange_schedule(remminafile, TRUE, "giovanni", "PFM.It", "pippo");
 
 	remmina_file_free(remminafile);
 }
@@ -617,6 +616,20 @@ static void remmina_main_file_editor_destroy(GtkWidget *widget, gpointer user_da
 {
 	TRACE_CALL("remmina_main_file_editor_destroy");
 	remmina_main_load_files();
+}
+
+void remmina_main_on_action_application_mpchange(GtkAction *action, gpointer user_data)
+{
+	TRACE_CALL("remmina_main_on_action_application_mpchange");
+	RemminaFile *remminafile;
+	
+	if (!remminamain->priv->selected_filename)
+		return;
+	remminafile = remmina_file_load(remminamain->priv->selected_filename);
+	if (remminafile == NULL)
+		return;
+	remmina_mpchange_schedule(remminafile, TRUE, "giovanni", "PFM.It", "pippo");
+	remmina_file_free(remminafile);
 }
 
 void remmina_main_on_action_connections_new(GtkAction *action, gpointer user_data)
