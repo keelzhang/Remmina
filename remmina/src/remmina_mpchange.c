@@ -297,7 +297,7 @@ static gboolean remmina_file_multipasswd_changer_mt(gpointer d)
 
 
 void
-remmina_mpchange_schedule(RemminaFile *remminafile, gboolean has_domain, gchar *username, gchar *domain, gchar *password)
+remmina_mpchange_schedule(gboolean has_domain, const gchar *group, const gchar *domain, const gchar *username, const gchar *password)
 {
 	// We usually get called in a subthread after a successful connection.
 	// So we just schedule the multipassword changer to be executed on
@@ -314,7 +314,7 @@ remmina_mpchange_schedule(RemminaFile *remminafile, gboolean has_domain, gchar *
 		mpcp->username = g_strdup(username);
 		mpcp->password = g_strdup(password);
 		mpcp->domain = g_strdup(domain);
-		mpcp->group = g_strdup(remmina_file_get_string(remminafile, "group"));
+		mpcp->group = g_strdup(group);
 		gdk_threads_add_idle(remmina_file_multipasswd_changer_mt, (gpointer)mpcp);
 	}
 

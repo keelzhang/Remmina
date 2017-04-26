@@ -84,7 +84,9 @@
             <property name="can_focus">False</property>
             <property name="margin_left">4</property>
             <property name="margin_right">4</property>
-            <property name="resize_mode">immediate</property>
+            <property name="margin_top">4</property>
+            <property name="margin_bottom">4</property>
+            <property name="hexpand">False</property>
             <property name="row_spacing">6</property>
             <property name="column_spacing">12</property>
             <child>
@@ -118,6 +120,7 @@
               <object class="GtkEntry" id="password1Entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
                 <property name="visibility">False</property>
               </object>
               <packing>
@@ -145,7 +148,7 @@
                 <property name="halign">start</property>
                 <property name="valign">center</property>
                 <property name="xpad">8</property>
-                <property name="label" translatable="yes">Username</property>
+                <property name="label" translatable="yes">User name</property>
                 <property name="justify">right</property>
               </object>
               <packing>
@@ -174,6 +177,7 @@
               <object class="GtkEntry" id="password2Entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
                 <property name="visibility">False</property>
               </object>
               <packing>
@@ -215,6 +219,7 @@
               <object class="GtkSearchEntry" id="groupEntry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
                 <property name="primary_icon_name">edit-find-symbolic</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">False</property>
@@ -228,6 +233,7 @@
               <object class="GtkSearchEntry" id="usernameEntry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
                 <property name="primary_icon_name">edit-find-symbolic</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">False</property>
@@ -241,6 +247,7 @@
               <object class="GtkSearchEntry" id="domainEntry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
                 <property name="primary_icon_name">edit-find-symbolic</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">False</property>

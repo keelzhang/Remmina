@@ -622,13 +622,22 @@ void remmina_main_on_action_application_mpchange(GtkAction *action, gpointer use
 {
 	TRACE_CALL("remmina_main_on_action_application_mpchange");
 	RemminaFile *remminafile;
-	
+
+	const gchar *username;
+	const gchar *domain;
+	const gchar *group;
+
 	if (!remminamain->priv->selected_filename)
 		return;
 	remminafile = remmina_file_load(remminamain->priv->selected_filename);
 	if (remminafile == NULL)
 		return;
-	remmina_mpchange_schedule(remminafile, TRUE, "giovanni", "PFM.It", "pippo");
+
+	username = remmina_file_get_string(remminafile, "username");
+	domain = remmina_file_get_string(remminafile, "domain");
+	group = remmina_file_get_string(remminafile, "group");
+
+	remmina_mpchange_schedule(TRUE, group, domain, username, "");
 	remmina_file_free(remminafile);
 }
 
